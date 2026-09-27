@@ -1,0 +1,8 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "youtube-intake",
+  "version": "0.1.0",
+  "description": "Summarize public YouTube videos via Gemini generateContent for Ai-Library Stage 6 intake briefs.",
+  "author": { "name": "Alex" },
+  "keywords": ["youtube", "gemini", "mcp", "intake"]
+}
