@@ -14,3 +14,4 @@ jobs:
           node-version: "22"
       - run: node --check server.mjs
       - run: node scripts/check-report-body.mjs
+      - run: node scripts/check-handshake.mjs
