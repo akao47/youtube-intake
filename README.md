@@ -45,6 +45,7 @@ Syntax check (no network, no key):
 ```bash
 node --check /workspace/youtube-intake/server.mjs
 node /workspace/youtube-intake/scripts/check-report-body.mjs
+node /workspace/youtube-intake/scripts/check-stdio-handshake.mjs
 ```
 
 Smoke `initialize` + `tools/list` with Content-Length framing (no API key required):

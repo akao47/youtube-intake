@@ -5,7 +5,8 @@
  * Never logs GEMINI_API_KEY.
  */
 
-import { stdin as input, stdout as output } from "node:process";
+import { appendFileSync, writeSync } from "node:fs";
+import { stdin as input } from "node:process";
 
 const SERVER_NAME = "youtube-intake";
 const SERVER_VERSION = "0.2.0";
@@ -30,17 +31,38 @@ const YT_URL_RE =
 
 /** "ndjson" is what Cursor sends. "content-length" is the local prove framing. */
 let framing = null;
+let notedStdin = false;
+
+function noteStdin(chunk) {
+  if (notedStdin || !chunk?.length) return;
+  notedStdin = true;
+  const hex = Buffer.from(chunk.subarray(0, 48)).toString("hex");
+  try {
+    appendFileSync(new URL("./stdin-first.log", import.meta.url), `${hex}\n`);
+  } catch {
+    // A read-only directory must not block the handshake.
+  }
+}
+
+function writeRaw(text) {
+  const buf = Buffer.from(text);
+  let offset = 0;
+  while (offset < buf.length) {
+    const wrote = writeSync(1, buf, offset, buf.length - offset);
+    if (wrote <= 0) return;
+    offset += wrote;
+  }
+}
 
 function writeMessage(msg) {
   const body = JSON.stringify(msg);
   if (framing === "ndjson") {
-    output.write(body);
-    output.write("\n");
+    // One syscall. A block-buffered write never reaches a host that holds stdin open.
+    writeRaw(`${body}\n`);
     return;
   }
   const header = `Content-Length: ${Buffer.byteLength(body, "utf8")}\r\n\r\n`;
-  output.write(header);
-  output.write(body);
+  writeRaw(header + body);
 }
 
 function toolResult(text, isError = false) {
@@ -242,7 +264,9 @@ async function main() {
   let buffer = Buffer.alloc(0);
 
   input.on("data", (chunk) => {
-    buffer = Buffer.concat([buffer, Buffer.from(chunk)]);
+    const bytes = Buffer.from(chunk);
+    noteStdin(bytes);
+    buffer = Buffer.concat([buffer, bytes]);
     processBuffer();
   });
 
