@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * youtube-intake MCP server (stdio, Content-Length framing).
+ * youtube-intake MCP server (stdio, Content-Length or ndjson).
  * Zero npm dependencies. Node 18+ fetch.
  * Never logs GEMINI_API_KEY.
  */
@@ -18,7 +18,8 @@ const DEFAULT_PROMPT = `Write one report for this video.
 Body, in this order:
 what the subject is
 what it takes to do that subject
-whether the claims hold up against official documentation and ordinary software engineering and machine learning practice
+whether the claims hold up against official documentation
+and ordinary software engineering and machine learning practice
 Extracted notes only. Never return a full transcript.`;
 
 const GEMINI_URL =

@@ -1,0 +1,5 @@
+Body, in this order:
+what the subject is
+what it takes to do that subject
+whether the claims hold up against official documentation
+and ordinary software engineering and machine learning practice

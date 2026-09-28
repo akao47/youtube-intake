@@ -16,7 +16,7 @@ Note: the report body is the same shape as Ai-Library X Bookmarks reports, copie
 |------|------|
 | `plugin.json` | Agent Plugin manifest (no undeclared top-level fields) |
 | `mcp.json` | stdio MCP server entry (`node server.mjs`) |
-| `server.mjs` | Zero-dep MCP server (Content-Length framing) |
+| `server.mjs` | Zero-dep MCP server (Content-Length or ndjson) |
 | `skills/summarize-youtube/SKILL.md` | When/how to call the tool |
 | `.gitignore` | `.env`, secrets, `node_modules`, etc. |
 
@@ -44,6 +44,7 @@ Syntax check (no network, no key):
 
 ```bash
 node --check /workspace/youtube-intake/server.mjs
+node /workspace/youtube-intake/scripts/check-report-body.mjs
 ```
 
 Smoke `initialize` + `tools/list` with Content-Length framing (no API key required):
