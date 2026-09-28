@@ -39,6 +39,12 @@ globalThis.fetch = async (url, opts) => {
       headers: { "content-type": "application/json" },
     });
   }
+  if (mode === "garbage") {
+    return new Response("not-json", {
+      status: 200,
+      headers: { "content-type": "text/plain" },
+    });
+  }
   if (mode === "empty") {
     return new Response('data: {"candidates":[{"content":{"parts":[{}]}}]}\n\n', {
       status: 200,

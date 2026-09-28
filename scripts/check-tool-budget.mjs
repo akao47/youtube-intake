@@ -52,13 +52,17 @@ function send(child, msg) {
 function waitForId(child, id, ms) {
   const started = Date.now();
   return new Promise((resolve) => {
-    const timer = setTimeout(() => resolve({ msg: null, elapsed: Date.now() - started }), ms);
-    const tick = () => {
+    const timer = setTimeout(() => {
+      child.stdout.off("data", tick);
+      resolve({ msg: null, elapsed: Date.now() - started });
+    }, ms);
+    function tick() {
       const msg = child.messages.find((item) => item.id === id);
       if (!msg) return;
       clearTimeout(timer);
+      child.stdout.off("data", tick);
       resolve({ msg, elapsed: Date.now() - started });
-    };
+    }
     child.stdout.on("data", tick);
     tick();
   });
@@ -255,6 +259,36 @@ try {
     }
     child.kill("SIGKILL");
     process.stdout.write("empty Gemini surfaced\n");
+  }
+
+  {
+    const logPath = join(dir, "garbage.log");
+    const child = spawnServer(
+      {
+        MOCK_GEMINI_MODE: "garbage",
+        YOUTUBE_INTAKE_TOOL_BUDGET_MS: "1000",
+      },
+      logPath
+    );
+    await initialize(child);
+    send(child, {
+      jsonrpc: "2.0",
+      id: 3,
+      method: "tools/call",
+      params: {
+        name: "summarize_youtube_video",
+        arguments: { video_url: video },
+      },
+    });
+    const garbage = await waitForId(child, 3, 1000);
+    if (
+      toolText(garbage.msg) !== "Gemini response not JSON (HTTP 200)" ||
+      garbage.msg.result.isError !== true
+    ) {
+      fail(`garbage Gemini returned ${JSON.stringify(garbage.msg?.result)}`);
+    }
+    child.kill("SIGKILL");
+    process.stdout.write("garbage Gemini surfaced\n");
   }
 
   {
