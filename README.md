@@ -1,10 +1,14 @@
 # youtube-intake
 
-Agent Plugin that summarizes **public YouTube videos** via Gemini `generateContent` for Ai-Library Stage 6 intake briefs.
+Agent Plugin that writes reports on **public YouTube videos** via Gemini `generateContent` in the same shape as Ai-Library X Bookmarks reports.
 
 **Domain:** `YoutubeIntakeBrief = { brief: string }`
 
 **Tool:** `summarize_youtube_video` — returns MCP text that is JSON `{"brief":"..."}`.
+
+## Report shape
+
+Note: the report body is the same shape as Ai-Library X Bookmarks reports, copied word for word from 00-admin/02-bots/bookmarks.md (card v1). If that body changes, update server.mjs too. Claims are verified later by Ai-Library Homework, not here.
 
 ## Files
 
