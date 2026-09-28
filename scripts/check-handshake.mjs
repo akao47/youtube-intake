@@ -82,14 +82,21 @@ function assertInitialize(text, label) {
   if (text.includes("handshake-check")) fail(`${label} wrote the env value`);
 }
 
+function assertNdjson(text, label) {
+  assertInitialize(text, label);
+  if (!text.startsWith("{") || text.includes("Content-Length:")) {
+    fail(`${label} answered with the wrong frame: ${JSON.stringify(text)}`);
+  }
+}
+
 {
   const child = spawnNode([server]);
   const pending = waitExit(child, 2000);
   child.stdin.end(ndjson(initMsg));
   const result = await pending;
   if (result.code !== 0) fail(`ndjson close exit ${result.code}`);
-  assertInitialize(result.stdout, "ndjson close");
-  if (!result.stdout.trimEnd().endsWith("}")) fail("ndjson close stdout is not a JSON line");
+  assertNdjson(result.stdout, "ndjson close");
+  if (!result.stdout.endsWith("\n")) fail("ndjson close stdout missing newline");
   process.stdout.write("ndjson close ok\n");
 }
 
@@ -112,7 +119,7 @@ function assertInitialize(text, label) {
   child.stdin.write(ndjson(initMsg));
   await new Promise((resolve) => setTimeout(resolve, 200));
   if (child.exitCode != null) fail("server exited while stdin stayed open");
-  assertInitialize(child.collected().stdout, "ndjson held");
+  assertNdjson(child.collected().stdout, "ndjson held");
   child.stdin.write(ndjson(listMsg));
   await new Promise((resolve) => setTimeout(resolve, 200));
   if (child.exitCode != null) fail("server exited before stdin closed");
@@ -133,15 +140,35 @@ function assertInitialize(text, label) {
     `import { stdin } from "node:process";\nstdin.pause();\nawait new Promise((r) => setTimeout(r, 40));\nawait import(${JSON.stringify(pathToFileURL(server).href)});\n`
   );
   try {
-    const child = spawnNode([launcher]);
-    const pending = waitExit(child, 2000);
-    child.stdin.end(ndjson(initMsg));
-    const result = await pending;
-    if (result.code !== 0) {
-      fail(`paused import exit ${result.code} stderr ${JSON.stringify(result.stderr)}`);
+    const closed = spawnNode([launcher]);
+    const closedPending = waitExit(closed, 2000);
+    closed.stdin.end(ndjson(initMsg));
+    const closedResult = await closedPending;
+    if (closedResult.code !== 0) {
+      fail(`paused import exit ${closedResult.code} stderr ${JSON.stringify(closedResult.stderr)}`);
     }
-    assertInitialize(result.stdout, "paused import");
+    assertNdjson(closedResult.stdout, "paused import");
     process.stdout.write("paused import ok\n");
+
+    const held = spawnNode([launcher]);
+    const heldPending = waitExit(held, 3000);
+    held.stdin.write(ndjson(initMsg));
+    await new Promise((resolve) => setTimeout(resolve, 200));
+    if (held.exitCode != null) fail("paused import exited while stdin stayed open");
+    assertNdjson(held.collected().stdout, "paused import held");
+    held.stdin.write(ndjson(listMsg));
+    await new Promise((resolve) => setTimeout(resolve, 200));
+    if (held.exitCode != null) fail("paused import exited before stdin closed");
+    if (!held.collected().stdout.includes('"name":"summarize_youtube_video"')) {
+      fail(`paused import tools/list missing: ${JSON.stringify(held.collected().stdout)}`);
+    }
+    if (held.collected().stdout.includes("Content-Length:")) {
+      fail("paused import tools/list used Content-Length");
+    }
+    held.stdin.end();
+    const heldResult = await heldPending;
+    if (heldResult.code !== 0) fail(`paused import held exit ${heldResult.code}`);
+    process.stdout.write("paused import held ok\n");
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
