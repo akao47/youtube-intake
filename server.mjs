@@ -237,7 +237,6 @@ async function handleRequest(msg) {
   }
 }
 
-/** Content-Length framed reader over stdin */
 async function main() {
   let buffer = Buffer.alloc(0);
 
@@ -258,6 +257,9 @@ async function main() {
     };
     wait();
   });
+
+  // pause() sticks. A data listener does not resume an explicit pause.
+  input.resume();
 
   function detectFraming() {
     let i = 0;
