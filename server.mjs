@@ -8,11 +8,18 @@
 import { stdin as input, stdout as output } from "node:process";
 
 const SERVER_NAME = "youtube-intake";
-const SERVER_VERSION = "0.1.0";
+const SERVER_VERSION = "0.2.0";
 const PROTOCOL_VERSION = "2024-11-05";
 
-const DEFAULT_PROMPT =
-  "Write a short library-report brief for SE/ML intake. Cover: what the subject is; what it takes; whether claims hold versus official documentation and ordinary SE/ML practice. Extracted notes only in plain prose paragraphs. Never return a full transcript.";
+// Same shape as Ai-Library X Bookmarks reports. Body copied word for word from
+// akao47/Ai-Library 00-admin/02-bots/bookmarks.md (card v1).
+// If that body changes, update this copy too.
+const DEFAULT_PROMPT = `Write one report for this video.
+Body, in this order:
+what the subject is
+what it takes to do that subject
+whether the claims hold up against official documentation and ordinary software engineering and machine learning practice
+Extracted notes only. Never return a full transcript.`;
 
 const GEMINI_URL =
   "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent";
@@ -41,7 +48,7 @@ function isValidYouTubeUrl(url) {
 const TOOL_DEF = {
   name: "summarize_youtube_video",
   description:
-    "Summarize a public YouTube video into a library-report brief for SE/ML intake. Returns JSON { brief: string }. Never invents content on failure.",
+    "Write a report on a public YouTube video in the same shape as Ai-Library X Bookmarks reports. Returns JSON { brief: string }. Never invents content on failure.",
   inputSchema: {
     type: "object",
     properties: {
@@ -52,7 +59,7 @@ const TOOL_DEF = {
       prompt: {
         type: "string",
         description:
-          "Optional custom prompt. If omitted, the server default SE/ML intake brief prompt is used.",
+          "Optional custom prompt. If omitted, the server default prompt (same shape as X Bookmarks reports) is used.",
       },
     },
     required: ["video_url"],
