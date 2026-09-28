@@ -86,6 +86,6 @@ Ask the owner **once**: Marketplace vs [cursor.directory](https://cursor.directo
 
 ## Model / API (locked)
 
-- `POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent`
+- `POST https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent`
 - Header: `x-goog-api-key`
 - Body parts order: `[{ file_data: { file_uri: video_url } }, { text: prompt }]`

@@ -15,13 +15,21 @@ const DEFAULT_PROMPT =
   "Write a short library-report brief for SE/ML intake. Cover: what the subject is; what it takes; whether claims hold versus official documentation and ordinary SE/ML practice. Extracted notes only in plain prose paragraphs. Never return a full transcript.";
 
 const GEMINI_URL =
-  "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent";
+  "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent";
 
 const YT_URL_RE =
   /^(https?:\/\/)?(www\.)?(youtube\.com\/watch\?|youtu\.be\/)/i;
 
+/** "ndjson" is what Cursor sends. "content-length" is the local prove framing. */
+let framing = null;
+
 function writeMessage(msg) {
   const body = JSON.stringify(msg);
+  if (framing === "ndjson") {
+    output.write(body);
+    output.write("\n");
+    return;
+  }
   const header = `Content-Length: ${Buffer.byteLength(body, "utf8")}\r\n\r\n`;
   output.write(header);
   output.write(body);
@@ -230,12 +238,52 @@ async function main() {
     processBuffer();
   });
 
+  let inflight = 0;
+
   input.on("end", () => {
-    // allow in-flight handleRequest to finish; exit shortly after
-    setTimeout(() => process.exit(0), 50);
+    const wait = () => {
+      if (inflight > 0) {
+        setTimeout(wait, 50);
+        return;
+      }
+      setTimeout(() => process.exit(0), 20);
+    };
+    wait();
   });
 
+  function detectFraming() {
+    let i = 0;
+    while (i < buffer.length && (buffer[i] === 32 || buffer[i] === 9 || buffer[i] === 10 || buffer[i] === 13)) {
+      i++;
+    }
+    if (i >= buffer.length) return;
+    framing = buffer[i] === 123 ? "ndjson" : "content-length";
+    if (i > 0) buffer = buffer.subarray(i);
+  }
+
+  function processNdjson() {
+    while (true) {
+      const nl = buffer.indexOf(10);
+      if (nl < 0) return;
+      const line = buffer.subarray(0, nl).toString("utf8").replace(/\r$/, "").trim();
+      buffer = buffer.subarray(nl + 1);
+      if (!line) continue;
+      let msg;
+      try {
+        msg = JSON.parse(line);
+      } catch {
+        continue;
+      }
+      dispatch(msg);
+    }
+  }
+
   function processBuffer() {
+    if (!framing) detectFraming();
+    if (framing === "ndjson") {
+      processNdjson();
+      return;
+    }
     while (true) {
       const headerEnd = findHeaderEnd(buffer);
       if (headerEnd < 0) return;
@@ -261,8 +309,14 @@ async function main() {
         continue;
       }
 
-      // fire and forget async handlers so we can keep reading
-      Promise.resolve(handleRequest(msg)).catch((err) => {
+      dispatch(msg);
+    }
+  }
+
+  function dispatch(msg) {
+    inflight += 1;
+    Promise.resolve(handleRequest(msg))
+      .catch((err) => {
         if (msg?.id !== undefined && msg?.id !== null) {
           writeMessage({
             jsonrpc: "2.0",
@@ -270,8 +324,10 @@ async function main() {
             error: { code: -32603, message: err?.message || String(err) },
           });
         }
+      })
+      .finally(() => {
+        inflight -= 1;
       });
-    }
   }
 }
 
