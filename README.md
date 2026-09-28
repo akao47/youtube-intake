@@ -45,6 +45,8 @@ Syntax check (no network, no key):
 ```bash
 node --check /workspace/youtube-intake/server.mjs
 node /workspace/youtube-intake/scripts/check-report-body.mjs
+node /workspace/youtube-intake/scripts/check-handshake.mjs
+node /workspace/youtube-intake/scripts/check-tool-budget.mjs
 ```
 
 Smoke `initialize` + `tools/list` with Content-Length framing (no API key required):
@@ -59,13 +61,14 @@ cd /workspace/youtube-intake
 ) | node server.mjs
 ```
 
-Optional live call (needs key; do **not** run in CI without secrets):
+Optional live call (needs a key on the host; do not commit the key, and do not run this in CI):
 
 ```bash
 export GEMINI_API_KEY='your-key-here'
 cd /workspace/youtube-intake
-# Then Content-Length-frame a tools/call for summarize_youtube_video with a public video_url.
-# Documented only — prove smoke above does not require this.
+# Newline-JSON tools/call summarize_youtube_video with a public video_url.
+# If the text is {"status":"pending","job_id":"..."}, call get_youtube_summary
+# with that job_id until {"brief":"..."} or a tool error.
 ```
 
 ## Cursor IDE local path
@@ -91,6 +94,7 @@ Ask the owner **once**: Marketplace vs [cursor.directory](https://cursor.directo
 
 ## Model / API (locked)
 
-- `POST https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent`
+- `POST https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:streamGenerateContent?alt=sse`
 - Header: `x-goog-api-key`
 - Body parts order: `[{ file_data: { file_uri: video_url } }, { text: prompt }]`
+- Each `tools/call` returns within 45s. A still-running Gemini call returns `{"status":"pending","job_id":"...","poll":"get_youtube_summary"}`. The same process keeps the Gemini stream until the brief is ready or 8 minutes pass.

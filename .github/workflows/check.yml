@@ -15,3 +15,4 @@ jobs:
       - run: node --check server.mjs
       - run: node scripts/check-report-body.mjs
       - run: node scripts/check-handshake.mjs
+      - run: node scripts/check-tool-budget.mjs

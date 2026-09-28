@@ -16,8 +16,9 @@ Do **not** invent video content. Always call the MCP tool.
 1. Call tool `summarize_youtube_video` with:
    - `video_url` (required): public `youtube.com/watch` or `youtu.be` URL
    - `prompt` (optional): omit to use the server default prompt (same shape as X Bookmarks reports)
-2. The tool returns MCP text that is JSON: `{"brief":"..."}`.
-3. Paste the report into `01-inbox/youtube/<subject>.md` — **the caller writes files**; this plugin does not write to Ai-Library.
+2. If the tool text is JSON `{"brief":"..."}`, that string is the report.
+3. If the tool text is JSON `{"status":"pending","job_id":"...","poll":"get_youtube_summary"}`, call `get_youtube_summary` with that `job_id`. Repeat until the text is `{"brief":"..."}` or an error. A pending result is not a report. Do not write a report from it.
+4. Paste the report into `01-inbox/youtube/<subject>.md`. The caller writes files. This plugin does not write to Ai-Library.
 
 ## Constraints
 
